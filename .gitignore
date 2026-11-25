@@ -1,0 +1,35 @@
+# Binaries
+cliptext
+cliptext.exe
+*.out
+*.test
+
+# Secrets, local configs & cookies (never commit!)
+.env
+.env.*
+config.json
+cliptext.json
+cookies.txt
+*cookies*.txt
+*.key
+*.pem
+
+# Local Whisper / ML models
+/models/
+*.bin
+*.gguf
+
+# Temporary media & logs
+tmp/
+*.wav
+*.mp3
+*.m4a
+*.vtt
+*.srt
+*.log
+
+# OS, IDE & tooling state
+.DS_Store
+.pair/
+.idea/
+.vscode/

@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "ClipText — YouTube to Script",
+  "version": "1.0.0",
+  "description": "Fast transcription of the active YouTube tab via local ClipText server",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "cookies"
+  ],
+  "host_permissions": [
+    "https://*.youtube.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ClipText — Get Script"
+  }
+}

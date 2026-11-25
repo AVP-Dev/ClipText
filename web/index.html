@@ -1,0 +1,1847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClipText — YouTube to Text</title>
+  <style>
+    :root {
+      --bg-base: #0b0e14;
+      --bg-surface: #121721;
+      --bg-elevated: #19202e;
+      --bg-input: #0e121b;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(99, 102, 241, 0.6);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-soft: rgba(99, 102, 241, 0.14);
+      --success: #10b981;
+      --success-soft: rgba(16, 185, 129, 0.14);
+      --warning: #f59e0b;
+      --warning-soft: rgba(245, 158, 11, 0.14);
+      --danger: #ef4444;
+      --danger-soft: rgba(239, 68, 68, 0.14);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow-card: 0 10px 30px -10px rgba(0, 0, 0, 0.55);
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background:
+        radial-gradient(1200px 600px at 15% -10%, rgba(99, 102, 241, 0.12), transparent 60%),
+        radial-gradient(900px 500px at 90% 0%, rgba(16, 185, 129, 0.07), transparent 55%),
+        var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 24px 20px 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: block;
+      margin-top: -2px;
+    }
+
+    .status-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .pill.ok {
+      border-color: rgba(16, 185, 129, 0.28);
+      color: #d1fae5;
+    }
+
+    .pill.ok .pill-dot {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    .pill.missing {
+      border-color: rgba(239, 68, 68, 0.25);
+      color: #fecaca;
+    }
+
+    .pill.missing .pill-dot {
+      background: var(--danger);
+    }
+
+    /* Card */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+      animation: fadeSlideIn 0.25s ease-out;
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    @keyframes fadeSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Main Input Bar */
+    .input-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .url-input-wrap {
+      flex: 1 1 320px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .url-input-icon {
+      position: absolute;
+      left: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    input[type="password"],
+    select {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.92rem;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .url-input-wrap input {
+      padding-left: 40px;
+      height: 46px;
+      font-size: 0.96rem;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16);
+    }
+
+    select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+
+    .controls-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 12px;
+      margin-top: 14px;
+      align-items: end;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-label {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background 0.18s, border-color 0.18s, transform 0.1s, opacity 0.18s;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      height: 46px;
+      padding: 0 22px;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      border-color: var(--border-subtle);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #222b3d;
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border-color: var(--border-subtle);
+      padding: 7px 12px;
+      font-size: 0.82rem;
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Settings Accordion */
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+
+    .settings-header:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .settings-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.94rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .chevron {
+      transition: transform 0.25s ease;
+      color: var(--text-muted);
+    }
+
+    .settings-card.open .chevron {
+      transform: rotate(180deg);
+    }
+
+    .settings-content {
+      display: none;
+      border-top: 1px solid var(--border-subtle);
+      padding: 20px;
+    }
+
+    .settings-card.open .settings-content {
+      display: block;
+      animation: fadeSlideIn 0.2s ease-out;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 12px;
+      margin-bottom: 18px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .tab-btn.active {
+      background: var(--accent-soft);
+      color: #a5b4fc;
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    /* Presets & Grids */
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .preset-btn {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .preset-btn:hover {
+      color: var(--text-primary);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .preset-btn.active {
+      background: var(--accent-soft);
+      color: #a5b4fc;
+      border-color: rgba(99, 102, 241, 0.45);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 14px;
+    }
+
+    .password-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-wrap input {
+      padding-right: 40px;
+    }
+
+    .eye-btn {
+      position: absolute;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      display: grid;
+      place-items: center;
+    }
+
+    .eye-btn:hover {
+      color: var(--text-primary);
+    }
+
+    /* Toggle Switch */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      margin-bottom: 16px;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #283142;
+      border-radius: 999px;
+      transition: 0.2s;
+    }
+
+    .slider::before {
+      content: "";
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+
+    .switch input:checked + .slider {
+      background: var(--accent);
+    }
+
+    .switch input:checked + .slider::before {
+      transform: translateX(20px);
+    }
+
+    /* Model Download List */
+    .models-section {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .section-subtitle {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+
+    .model-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .model-item {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+    }
+
+    .model-info {
+      flex: 1 1 240px;
+    }
+
+    .model-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .model-size {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .model-desc {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .model-progress-wrap {
+      width: 100%;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .model-progress-wrap.active {
+      display: block;
+    }
+
+    .settings-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .save-status {
+      font-size: 0.82rem;
+      color: var(--success);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .save-status.visible {
+      opacity: 1;
+    }
+
+    /* Progress & Video Meta Card */
+    .hidden {
+      display: none !important;
+    }
+
+    .meta-layout {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .meta-thumb {
+      width: 168px;
+      height: 95px;
+      border-radius: var(--radius-md);
+      object-fit: cover;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .meta-details {
+      flex: 1 1 260px;
+      min-width: 0;
+    }
+
+    .meta-title {
+      font-size: 1.02rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .meta-sub {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+
+    .progress-block {
+      margin-top: 16px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.83rem;
+      margin-bottom: 8px;
+    }
+
+    .progress-msg {
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .progress-pct {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--bg-input);
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), #8b5cf6);
+      transition: width 0.25s ease;
+    }
+
+    .progress-fill.done {
+      background: linear-gradient(90deg, var(--success), #34d399);
+    }
+
+    .progress-fill.error {
+      background: var(--danger);
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-banner {
+      margin-top: 12px;
+      padding: 11px 14px;
+      border-radius: var(--radius-md);
+      background: var(--danger-soft);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fecaca;
+      font-size: 0.85rem;
+    }
+
+    /* Result Card */
+    .result-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .source-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      background: var(--success-soft);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .result-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .result-output {
+      width: 100%;
+      min-height: 280px;
+      max-height: 520px;
+      overflow-y: auto;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      font-size: 0.92rem;
+      line-height: 1.65;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .result-output.mono {
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      font-size: 0.85rem;
+      font-weight: 500;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 100;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 680px) {
+      .controls-row {
+        grid-template-columns: 1fr;
+      }
+      .btn-primary {
+        width: 100%;
+      }
+      .meta-thumb {
+        width: 100%;
+        height: 180px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" x2="12" y1="19" y2="22"/>
+          </svg>
+        </div>
+        <div>
+          <span class="brand-title">ClipText</span>
+          <span class="brand-sub">Local YouTube Transcription</span>
+        </div>
+      </div>
+
+      <div class="status-pills" id="statusPills">
+        <span class="pill" id="pill-yt_dlp"><span class="pill-dot"></span>yt-dlp</span>
+        <span class="pill" id="pill-ffmpeg"><span class="pill-dot"></span>ffmpeg</span>
+        <span class="pill" id="pill-whisper_cli"><span class="pill-dot"></span>whisper-cli</span>
+      </div>
+    </header>
+
+    <!-- Main Input Card -->
+    <section class="card">
+      <div class="card-body">
+        <form id="transcribeForm">
+          <div class="input-row">
+            <div class="url-input-wrap">
+              <svg class="url-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+              <input type="url" id="urlInput" placeholder="Paste a YouTube video URL (https://youtube.com/watch?v=...)" required />
+            </div>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              <span>Get Transcript</span>
+            </button>
+          </div>
+
+          <div class="controls-row">
+            <div class="field-group">
+              <label class="field-label" for="modeSelect">Transcription Mode</label>
+              <select id="modeSelect">
+                <option value="auto">Auto (Subtitles → Whisper)</option>
+                <option value="subtitles">Subtitles Only</option>
+                <option value="local">Local Whisper</option>
+                <option value="api">API (OpenAI-compatible)</option>
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="languageSelect">Language</label>
+              <select id="languageSelect">
+                <option value="auto">Auto</option>
+                <option value="ru">Russian</option>
+                <option value="en">English</option>
+                <option value="uk">Ukrainian</option>
+                <option value="de">Deutsch</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="cookiesBrowserSelect">Browser Cookies</label>
+              <select id="cookiesBrowserSelect" title="Browser where you are signed in to YouTube">
+                <option value="chrome">Chrome</option>
+                <option value="safari">Safari</option>
+                <option value="firefox">Firefox</option>
+                <option value="brave">Brave</option>
+                <option value="arc">Arc</option>
+                <option value="edge">Edge</option>
+                <option value="none">No cookies (if IP is clean)</option>
+              </select>
+            </div>
+
+            <button type="button" class="btn btn-secondary" id="toggleSettingsBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+              </svg>
+              <span>Settings</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Collapsible Settings Card -->
+    <section class="card settings-card" id="settingsCard">
+      <div class="settings-header" id="settingsHeader">
+        <div class="settings-title">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <span>Model, API &amp; AI Cleanup Settings</span>
+        </div>
+        <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </div>
+
+      <div class="settings-content">
+        <div class="tabs" id="settingsTabs">
+          <button type="button" class="tab-btn active" data-tab="tab-local">Local Whisper</button>
+          <button type="button" class="tab-btn" data-tab="tab-api">API (OpenAI-compatible)</button>
+          <button type="button" class="tab-btn" data-tab="tab-llm">AI Text Cleanup (optional)</button>
+          <button type="button" class="tab-btn" data-tab="tab-cookies">YouTube Cookies</button>
+        </div>
+
+        <!-- Tab: Local Whisper -->
+        <div class="tab-pane active" id="tab-local">
+          <div class="field-group">
+            <label class="field-label" for="localModelSelect">Selected Local Model (.bin)</label>
+            <select id="localModelSelect">
+              <option value="">Loading models...</option>
+            </select>
+          </div>
+
+          <div class="models-section" id="downloadModelsSection">
+            <div class="section-subtitle">Download Models</div>
+            <div class="model-list" id="availableModelsList"></div>
+          </div>
+        </div>
+
+        <!-- Tab: API -->
+        <div class="tab-pane" id="tab-api">
+          <div class="field-label" style="margin-bottom: 8px;">Quick Presets</div>
+          <div class="preset-row" id="apiPresets">
+            <button type="button" class="preset-btn" data-preset="groq">Groq</button>
+            <button type="button" class="preset-btn" data-preset="nvidia">NVIDIA NIM</button>
+            <button type="button" class="preset-btn" data-preset="openai">OpenAI</button>
+            <button type="button" class="preset-btn" data-preset="custom">Custom</button>
+          </div>
+
+          <div class="form-grid">
+            <div class="field-group">
+              <label class="field-label" for="apiBaseUrl">Base URL</label>
+              <input type="text" id="apiBaseUrl" placeholder="https://api.openai.com/v1" />
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="apiModel">Model</label>
+              <input type="text" id="apiModel" placeholder="whisper-1" />
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="apiKey">API Key</label>
+              <div class="password-wrap">
+                <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off" />
+                <button type="button" class="eye-btn" data-target="apiKey" aria-label="Show/hide key">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: LLM Cleanup -->
+        <div class="tab-pane" id="tab-llm">
+          <div class="toggle-row">
+            <div>
+              <div style="font-size: 0.9rem; font-weight: 600;">Automatic AI Text Cleanup</div>
+              <div style="font-size: 0.78rem; color: var(--text-secondary);">Removes filler words, fixes punctuation, and formats paragraphs after transcription</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="llmEnabled" />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="field-label" style="margin-bottom: 8px;">LLM Presets</div>
+          <div class="preset-row" id="llmPresets">
+            <button type="button" class="preset-btn" data-llm-preset="groq">Groq</button>
+            <button type="button" class="preset-btn" data-llm-preset="nvidia">NVIDIA</button>
+            <button type="button" class="preset-btn" data-llm-preset="ollama">Ollama</button>
+            <button type="button" class="preset-btn" data-llm-preset="openai">OpenAI</button>
+          </div>
+
+          <div class="form-grid">
+            <div class="field-group">
+              <label class="field-label" for="llmBaseUrl">Base URL</label>
+              <input type="text" id="llmBaseUrl" placeholder="https://api.groq.com/openai/v1" />
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="llmModel">Model</label>
+              <input type="text" id="llmModel" placeholder="llama-3.3-70b-versatile" />
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="llmApiKey">API Key</label>
+              <div class="password-wrap">
+                <input type="password" id="llmApiKey" placeholder="sk-... (not required for Ollama)" autocomplete="off" />
+                <button type="button" class="eye-btn" data-target="llmApiKey" aria-label="Show/hide key">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: YouTube Cookies -->
+        <div class="tab-pane" id="tab-cookies">
+          <div class="field-group" style="margin-bottom: 12px;">
+            <label class="field-label" for="cookiesFileInput">Path to cookies.txt (Netscape format, takes priority over browser)</label>
+            <input type="text" id="cookiesFileInput" placeholder="/Users/.../cookies.txt" />
+          </div>
+          <div class="field-group" style="margin-bottom: 12px;">
+            <label class="field-label" for="cookiesPasteInput">Or paste cookies.txt content here (from the "Get cookies.txt LOCALLY" extension)</label>
+            <textarea id="cookiesPasteInput" rows="4" placeholder="# Netscape HTTP Cookie File&#10;.youtube.com&#9;TRUE&#9;/&#9;TRUE&#9;..." style="width:100%; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px; font-family:monospace; font-size:12px;"></textarea>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary" id="saveCookiesBtn">Save cookies.txt</button>
+            <label class="btn btn-secondary" style="cursor:pointer; display:inline-flex; align-items:center;">
+              <span>Upload cookies.txt</span>
+              <input type="file" id="cookiesUploadInput" accept=".txt" style="display:none;" />
+            </label>
+            <span style="font-size:12px; color:var(--text-muted);">On macOS, "Browser Cookies" for Chrome/Safari may require Full Disk Access in System Settings, so a cookies.txt file is the most reliable option.</span>
+          </div>
+        </div>
+
+        <div class="settings-footer">
+          <span class="save-status" id="saveStatus">Settings saved</span>
+          <button type="button" class="btn btn-primary" id="saveConfigBtn" style="height: 40px; padding: 0 18px;">
+            Save Settings
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Progress & Video Meta Card -->
+    <section class="card hidden" id="progressCard">
+      <div class="card-body">
+        <div class="meta-layout hidden" id="metaLayout">
+          <img class="meta-thumb" id="metaThumb" alt="Video thumbnail" />
+          <div class="meta-details">
+            <div class="meta-title" id="metaTitle">—</div>
+            <div class="meta-sub">
+              <span id="metaChannel">—</span>
+              <span id="metaDuration">00:00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="progress-block">
+          <div class="progress-header">
+            <span class="progress-msg" id="progressMsg">
+              <span class="spinner" id="progressSpinner"></span>
+              <span id="progressText">Preparing...</span>
+            </span>
+            <span class="progress-pct" id="progressPct">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+        </div>
+
+        <div class="error-banner hidden" id="errorBanner"></div>
+      </div>
+    </section>
+
+    <!-- Result Card -->
+    <section class="card hidden" id="resultCard">
+      <div class="card-body">
+        <div class="result-header">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span class="source-badge" id="sourceBadge">Source</span>
+          </div>
+
+          <div class="result-actions">
+            <button type="button" class="btn btn-ghost" id="copyBtn">Copy</button>
+            <button type="button" class="btn btn-ghost" id="downloadTxtBtn">Download .txt</button>
+            <button type="button" class="btn btn-ghost" id="downloadSrtBtn">Download .srt</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="cleanLlmBtn">Clean with LLM</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="summaryLlmBtn">Summarize</button>
+          </div>
+        </div>
+
+        <div class="tabs" id="resultTabs" style="margin-bottom: 14px;">
+          <button type="button" class="tab-btn active" data-result-tab="text">Text</button>
+          <button type="button" class="tab-btn" data-result-tab="timestamps">With Timestamps</button>
+          <button type="button" class="tab-btn" data-result-tab="srt">SRT</button>
+          <button type="button" class="tab-btn hidden" data-result-tab="cleaned" id="cleanedTabBtn">Cleaned Script</button>
+        </div>
+
+        <div class="result-output" id="resultOutput"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    (() => {
+      const API_PRESETS = {
+        groq: { baseUrl: 'https://api.groq.com/openai/v1', model: 'whisper-large-v3-turbo' },
+        nvidia: { baseUrl: 'https://integrate.api.nvidia.com/v1', model: 'openai/whisper-large-v3' },
+        openai: { baseUrl: 'https://api.openai.com/v1', model: 'whisper-1' },
+        custom: { baseUrl: '', model: '' }
+      };
+
+      const LLM_PRESETS = {
+        groq: { baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile' },
+        nvidia: { baseUrl: 'https://integrate.api.nvidia.com/v1', model: 'meta/llama-3.1-70b-instruct' },
+        ollama: { baseUrl: 'http://localhost:11434/v1', model: 'llama3.2' },
+        openai: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' }
+      };
+
+      const state = {
+        apiPreset: 'custom',
+        models: [],
+        result: null,
+        activeResultTab: 'text',
+        isRunning: false,
+        videoTitle: 'transcript'
+      };
+
+      // DOM elements
+      const $ = (id) => document.getElementById(id);
+      const urlInput = $('urlInput');
+      const submitBtn = $('submitBtn');
+      const modeSelect = $('modeSelect');
+      const languageSelect = $('languageSelect');
+      const cookiesBrowserSelect = $('cookiesBrowserSelect');
+      const cookiesFileInput = $('cookiesFileInput');
+      const cookiesPasteInput = $('cookiesPasteInput');
+      const saveCookiesBtn = $('saveCookiesBtn');
+      const cookiesUploadInput = $('cookiesUploadInput');
+      const settingsCard = $('settingsCard');
+      const localModelSelect = $('localModelSelect');
+      const availableModelsList = $('availableModelsList');
+      const downloadModelsSection = $('downloadModelsSection');
+
+      const apiBaseUrl = $('apiBaseUrl');
+      const apiKey = $('apiKey');
+      const apiModel = $('apiModel');
+
+      const llmEnabled = $('llmEnabled');
+      const llmBaseUrl = $('llmBaseUrl');
+      const llmApiKey = $('llmApiKey');
+      const llmModel = $('llmModel');
+
+      const saveConfigBtn = $('saveConfigBtn');
+      const saveStatus = $('saveStatus');
+
+      const progressCard = $('progressCard');
+      const metaLayout = $('metaLayout');
+      const metaThumb = $('metaThumb');
+      const metaTitle = $('metaTitle');
+      const metaChannel = $('metaChannel');
+      const metaDuration = $('metaDuration');
+      const progressSpinner = $('progressSpinner');
+      const progressText = $('progressText');
+      const progressPct = $('progressPct');
+      const progressFill = $('progressFill');
+      const errorBanner = $('errorBanner');
+
+      const resultCard = $('resultCard');
+      const sourceBadge = $('sourceBadge');
+      const cleanedTabBtn = $('cleanedTabBtn');
+      const resultOutput = $('resultOutput');
+      const toastEl = $('toast');
+
+      let toastTimer = null;
+      function showToast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+      }
+
+      function formatBytesMB(bytes) {
+        if (!bytes || bytes <= 0) return '0 MB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+      }
+
+      function formatDuration(sec) {
+        if (sec == null || isNaN(sec)) return '00:00';
+        const total = Math.max(0, Math.floor(sec));
+        const h = Math.floor(total / 3600);
+        const m = Math.floor((total % 3600) / 60);
+        const s = total % 60;
+        const pad = (n) => String(n).padStart(2, '0');
+        return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+      }
+
+      function formatSrtTime(sec) {
+        const totalMs = Math.max(0, Math.round((sec || 0) * 1000));
+        const h = Math.floor(totalMs / 3600000);
+        const m = Math.floor((totalMs % 3600000) / 60000);
+        const s = Math.floor((totalMs % 60000) / 1000);
+        const ms = totalMs % 1000;
+        const pad = (n, len = 2) => String(n).padStart(len, '0');
+        return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms, 3)}`;
+      }
+
+      function formatTimestamp(sec) {
+        return formatDuration(sec);
+      }
+
+      function buildTimestampsText(segments) {
+        if (!Array.isArray(segments) || segments.length === 0) return state.result?.text || '';
+        return segments
+          .map((seg) => `[${formatTimestamp(seg.start)} → ${formatTimestamp(seg.end)}] ${(seg.text || '').trim()}`)
+          .join('\n');
+      }
+
+      function buildSrtText(segments) {
+        if (!Array.isArray(segments) || segments.length === 0) return '';
+        return segments
+          .map((seg, idx) => `${idx + 1}\n${formatSrtTime(seg.start)} --> ${formatSrtTime(seg.end)}\n${(seg.text || '').trim()}`)
+          .join('\n\n');
+      }
+
+      function mapSourceLabel(source) {
+        if (!source) return 'Done';
+        const s = String(source).toLowerCase();
+        if (s.includes('sub')) return 'YouTube Subtitles';
+        if (s.includes('local') || s.includes('whisper_cli')) return 'Local Whisper';
+        if (s.includes('api') || s.includes('openai') || s.includes('groq')) return 'API';
+        return source;
+      }
+
+      // SSE Stream parser for POST fetch responses
+      async function readSSEStream(response, handlers) {
+        if (!response.ok) {
+          let errText = `HTTP ${response.status}`;
+          try {
+            const json = await response.json();
+            if (json.message || json.error) errText = json.message || json.error;
+          } catch (_) {}
+          throw new Error(errText);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
+
+          let boundary;
+          while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+            const rawEvent = buffer.slice(0, boundary);
+            buffer = buffer.slice(boundary + 2);
+            if (!rawEvent.trim()) continue;
+
+            let eventType = 'message';
+            const dataLines = [];
+            for (const line of rawEvent.split('\n')) {
+              if (line.startsWith('event:')) {
+                eventType = line.slice(6).trim();
+              } else if (line.startsWith('data:')) {
+                dataLines.push(line.slice(5).trimStart());
+              }
+            }
+
+            if (dataLines.length === 0) continue;
+            const rawData = dataLines.join('\n');
+            let payload = rawData;
+            try {
+              payload = JSON.parse(rawData);
+            } catch (_) {}
+
+            if (handlers[eventType]) {
+              handlers[eventType](payload);
+            }
+          }
+        }
+      }
+
+      // Load system info & config
+      async function loadSystem() {
+        try {
+          const res = await fetch('/api/system');
+          if (!res.ok) throw new Error('Failed to load /api/system');
+          const data = await res.json();
+
+          // Update tool pills
+          if (data.tools) {
+            for (const key of ['yt_dlp', 'ffmpeg', 'whisper_cli']) {
+              const pill = $(`pill-${key}`);
+              if (!pill) continue;
+              const ok = Boolean(data.tools[key]);
+              pill.classList.toggle('ok', ok);
+              pill.classList.toggle('missing', !ok);
+              pill.title = ok ? 'Available' : 'Not found on system';
+            }
+          }
+
+          // Update models
+          state.models = Array.isArray(data.models) ? data.models : [];
+          renderModels(data.config?.local_model);
+
+          // Apply config
+          if (data.config) {
+            const c = data.config;
+            if (c.mode) modeSelect.value = c.mode;
+            if (c.language) languageSelect.value = c.language;
+            if (c.cookies_browser) cookiesBrowserSelect.value = c.cookies_browser;
+            if (typeof c.cookies_file === 'string') cookiesFileInput.value = c.cookies_file;
+            if (c.local_model) localModelSelect.value = c.local_model;
+
+            state.apiPreset = c.api_preset || 'custom';
+            updatePresetActive('apiPresets', 'data-preset', state.apiPreset);
+            apiBaseUrl.value = c.api_base_url || '';
+            apiKey.value = c.api_key || '';
+            apiModel.value = c.api_model || '';
+
+            llmEnabled.checked = Boolean(c.llm_enabled);
+            llmBaseUrl.value = c.llm_base_url || '';
+            llmApiKey.value = c.llm_api_key || '';
+            llmModel.value = c.llm_model || '';
+          }
+        } catch (err) {
+          showToast('Server connection error: ' + err.message);
+        }
+      }
+
+      function renderModels(preferredModel) {
+        const downloaded = state.models.filter((m) => m.downloaded);
+        const available = state.models.filter((m) => !m.downloaded);
+
+        localModelSelect.innerHTML = '';
+        if (downloaded.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'No downloaded models (.bin)';
+          localModelSelect.appendChild(opt);
+        } else {
+          for (const m of downloaded) {
+            const opt = document.createElement('option');
+            opt.value = m.name;
+            opt.textContent = `${m.name} (${formatBytesMB(m.size_bytes)})`;
+            localModelSelect.appendChild(opt);
+          }
+          if (preferredModel && downloaded.some((m) => m.name === preferredModel)) {
+            localModelSelect.value = preferredModel;
+          }
+        }
+
+        availableModelsList.innerHTML = '';
+        if (available.length === 0) {
+          downloadModelsSection.classList.add('hidden');
+        } else {
+          downloadModelsSection.classList.remove('hidden');
+          for (const m of available) {
+            const item = document.createElement('div');
+            item.className = 'model-item';
+            item.innerHTML = `
+              <div class="model-info">
+                <div class="model-name">
+                  <span>${escapeHtml(m.name)}</span>
+                  <span class="model-size">${formatBytesMB(m.size_bytes)}</span>
+                </div>
+                <div class="model-desc">${escapeHtml(m.description || '')}</div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm download-model-btn" data-filename="${escapeHtml(m.name)}">
+                Download
+              </button>
+              <div class="model-progress-wrap">
+                <div class="progress-header" style="margin-bottom: 4px; font-size: 0.76rem;">
+                  <span class="dl-status-text" style="color: var(--text-secondary);">Downloading...</span>
+                  <span class="dl-pct">0%</span>
+                </div>
+                <div class="progress-track" style="height: 6px;">
+                  <div class="progress-fill dl-fill"></div>
+                </div>
+              </div>
+            `;
+            availableModelsList.appendChild(item);
+          }
+        }
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      // Model download handler
+      availableModelsList.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.download-model-btn');
+        if (!btn) return;
+        const filename = btn.dataset.filename;
+        const item = btn.closest('.model-item');
+        const progressWrap = item.querySelector('.model-progress-wrap');
+        const statusText = item.querySelector('.dl-status-text');
+        const pctEl = item.querySelector('.dl-pct');
+        const fillEl = item.querySelector('.dl-fill');
+
+        btn.disabled = true;
+        btn.textContent = 'Downloading...';
+        progressWrap.classList.add('active');
+
+        try {
+          const res = await fetch('/api/models/download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename })
+          });
+
+          await readSSEStream(res, {
+            progress(data) {
+              const pct = Math.min(100, Math.max(0, Math.round(data.percent || 0)));
+              fillEl.style.width = pct + '%';
+              pctEl.textContent = pct + '%';
+              if (data.total_bytes) {
+                statusText.textContent = `${formatBytesMB(data.downloaded_bytes)} / ${formatBytesMB(data.total_bytes)}`;
+              }
+            },
+            done(data) {
+              fillEl.style.width = '100%';
+              fillEl.classList.add('done');
+              pctEl.textContent = '100%';
+              statusText.textContent = 'Done';
+              showToast(`Model ${data.model || filename} downloaded`);
+              loadSystem();
+            },
+            error(data) {
+              fillEl.classList.add('error');
+              statusText.textContent = data.message || 'Download failed';
+              btn.disabled = false;
+              btn.textContent = 'Retry';
+              showToast('Model download error: ' + (data.message || 'unknown error'));
+            }
+          });
+        } catch (err) {
+          fillEl.classList.add('error');
+          statusText.textContent = err.message;
+          btn.disabled = false;
+          btn.textContent = 'Retry';
+          showToast('Download error: ' + err.message);
+        }
+      });
+
+      // Settings collapse & tabs
+      function toggleSettings(forceOpen) {
+        const open = forceOpen !== undefined ? forceOpen : !settingsCard.classList.contains('open');
+        settingsCard.classList.toggle('open', open);
+      }
+
+      $('settingsHeader').addEventListener('click', () => toggleSettings());
+      $('toggleSettingsBtn').addEventListener('click', () => toggleSettings());
+
+      $('settingsTabs').addEventListener('click', (e) => {
+        const btn = e.target.closest('.tab-btn');
+        if (!btn) return;
+        const targetId = btn.dataset.tab;
+        document.querySelectorAll('#settingsTabs .tab-btn').forEach((b) => b.classList.toggle('active', b === btn));
+        document.querySelectorAll('.settings-content .tab-pane').forEach((p) => p.classList.toggle('active', p.id === targetId));
+      });
+
+      // Eye toggle for password inputs
+      document.querySelectorAll('.eye-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const input = $(btn.dataset.target);
+          if (!input) return;
+          input.type = input.type === 'password' ? 'text' : 'password';
+        });
+      });
+
+      function updatePresetActive(containerId, attr, value) {
+        document.querySelectorAll(`#${containerId} .preset-btn`).forEach((b) => {
+          b.classList.toggle('active', b.getAttribute(attr) === value);
+        });
+      }
+
+      $('apiPresets').addEventListener('click', (e) => {
+        const btn = e.target.closest('.preset-btn');
+        if (!btn) return;
+        const preset = btn.dataset.preset;
+        state.apiPreset = preset;
+        updatePresetActive('apiPresets', 'data-preset', preset);
+        if (preset !== 'custom' && API_PRESETS[preset]) {
+          apiBaseUrl.value = API_PRESETS[preset].baseUrl;
+          apiModel.value = API_PRESETS[preset].model;
+        }
+      });
+
+      $('llmPresets').addEventListener('click', (e) => {
+        const btn = e.target.closest('.preset-btn');
+        if (!btn) return;
+        const preset = btn.dataset.llmPreset;
+        updatePresetActive('llmPresets', 'data-llm-preset', preset);
+        if (LLM_PRESETS[preset]) {
+          llmBaseUrl.value = LLM_PRESETS[preset].baseUrl;
+          llmModel.value = LLM_PRESETS[preset].model;
+        }
+      });
+
+      function getConfigPayload() {
+        return {
+          mode: modeSelect.value,
+          language: languageSelect.value,
+          cookies_browser: cookiesBrowserSelect.value,
+          cookies_file: cookiesFileInput.value.trim(),
+          local_model: localModelSelect.value,
+          api_preset: state.apiPreset,
+          api_base_url: apiBaseUrl.value.trim(),
+          api_key: apiKey.value.trim(),
+          api_model: apiModel.value.trim(),
+          llm_enabled: llmEnabled.checked,
+          llm_base_url: llmBaseUrl.value.trim(),
+          llm_api_key: llmApiKey.value.trim(),
+          llm_model: llmModel.value.trim()
+        };
+      }
+
+      cookiesUploadInput.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const text = await file.text();
+        cookiesPasteInput.value = text;
+        saveCookiesBtn.click();
+      });
+
+      saveCookiesBtn.addEventListener('click', async () => {
+        const content = cookiesPasteInput.value.trim();
+        if (!content) {
+          showToast('Paste cookies.txt content');
+          return;
+        }
+        saveCookiesBtn.disabled = true;
+        try {
+          const res = await fetch('/api/cookies', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to save cookies');
+          cookiesFileInput.value = data.path;
+          await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(getConfigPayload())
+          });
+          showToast('cookies.txt saved: ' + data.path);
+        } catch (err) {
+          showToast(err.message);
+        } finally {
+          saveCookiesBtn.disabled = false;
+        }
+      });
+
+      saveConfigBtn.addEventListener('click', async () => {
+        saveConfigBtn.disabled = true;
+        try {
+          const res = await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(getConfigPayload())
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          if (data.ok) {
+            saveStatus.classList.add('visible');
+            setTimeout(() => saveStatus.classList.remove('visible'), 2500);
+            showToast('Settings saved');
+          }
+        } catch (err) {
+          showToast('Save error: ' + err.message);
+        } finally {
+          saveConfigBtn.disabled = false;
+        }
+      });
+
+      // Transcription submission
+      $('transcribeForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const url = urlInput.value.trim();
+        if (!url || state.isRunning) return;
+
+        state.isRunning = true;
+        submitBtn.disabled = true;
+        state.result = null;
+        state.videoTitle = 'transcript';
+
+        // Reset UI
+        progressCard.classList.remove('hidden');
+        resultCard.classList.add('hidden');
+        metaLayout.classList.add('hidden');
+        errorBanner.classList.add('hidden');
+        errorBanner.textContent = '';
+        progressSpinner.classList.remove('hidden');
+        progressFill.className = 'progress-fill';
+        progressFill.style.width = '4%';
+        progressPct.textContent = '0%';
+        progressText.textContent = 'Starting processing...';
+
+        const payload = {
+          url,
+          ...getConfigPayload()
+        };
+
+        // Persist current mode/language/cookies selection automatically.
+        fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(getConfigPayload())
+        }).catch(() => {});
+
+        try {
+          const res = await fetch('/api/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          await readSSEStream(res, {
+            meta(data) {
+              metaLayout.classList.remove('hidden');
+              if (data.thumbnail) {
+                metaThumb.src = data.thumbnail;
+                metaThumb.classList.remove('hidden');
+              } else {
+                metaThumb.classList.add('hidden');
+              }
+              metaTitle.textContent = data.title || 'Untitled';
+              metaChannel.textContent = data.channel || 'YouTube';
+              metaDuration.textContent = formatDuration(data.duration);
+              if (data.title) {
+                state.videoTitle = data.title.replace(/[\\/:*?"<>|]+/g, '_').slice(0, 80);
+              }
+            },
+            status(data) {
+              if (data.message) progressText.textContent = data.message;
+            },
+            progress(data) {
+              const pct = Math.min(100, Math.max(0, Math.round(data.percent || 0)));
+              progressFill.style.width = pct + '%';
+              progressPct.textContent = pct + '%';
+              if (data.message) progressText.textContent = data.message;
+            },
+            result(data) {
+              progressFill.style.width = '100%';
+              progressFill.classList.add('done');
+              progressPct.textContent = '100%';
+              progressSpinner.classList.add('hidden');
+              progressText.textContent = 'Done!';
+              showResult(data);
+            },
+            error(data) {
+              showTranscribeError(data.message || 'An error occurred during processing');
+            }
+          });
+        } catch (err) {
+          showTranscribeError(err.message);
+        } finally {
+          state.isRunning = false;
+          submitBtn.disabled = false;
+          progressSpinner.classList.add('hidden');
+        }
+      });
+
+      function showTranscribeError(message) {
+        progressSpinner.classList.add('hidden');
+        progressFill.classList.add('error');
+        progressText.textContent = 'Error';
+        const lower = (message || '').toLowerCase();
+        if (lower.includes('not a bot') || lower.includes('cookies')) {
+          errorBanner.textContent = 'YouTube requires sign-in verification (bot protection) or browser cookie access. Upload a cookies.txt file in the "YouTube Cookies" tab below (this only needs to be done once).';
+          settingsCard.classList.add('open');
+          const cookiesTabBtn = document.querySelector('#settingsTabs .tab-btn[data-tab="tab-cookies"]');
+          if (cookiesTabBtn) cookiesTabBtn.click();
+        } else {
+          errorBanner.textContent = message;
+        }
+        errorBanner.classList.remove('hidden');
+      }
+
+      function showResult(data) {
+        state.result = data;
+        resultCard.classList.remove('hidden');
+        sourceBadge.textContent = mapSourceLabel(data.source);
+
+        const hasCleaned = Boolean(data.cleaned_text && data.cleaned_text.trim());
+        cleanedTabBtn.classList.toggle('hidden', !hasCleaned);
+
+        setResultTab(hasCleaned ? 'cleaned' : 'text');
+      }
+
+      function getTabContent(tab) {
+        if (!state.result) return '';
+        switch (tab) {
+          case 'text':
+            return state.result.text || '';
+          case 'timestamps':
+            return buildTimestampsText(state.result.segments);
+          case 'srt':
+            return buildSrtText(state.result.segments);
+          case 'cleaned':
+            return state.result.cleaned_text || '';
+          default:
+            return '';
+        }
+      }
+
+      function setResultTab(tab) {
+        state.activeResultTab = tab;
+        document.querySelectorAll('#resultTabs .tab-btn').forEach((b) => {
+          b.classList.toggle('active', b.dataset.resultTab === tab);
+        });
+        resultOutput.classList.toggle('mono', tab === 'timestamps' || tab === 'srt');
+        resultOutput.textContent = getTabContent(tab);
+      }
+
+      $('resultTabs').addEventListener('click', (e) => {
+        const btn = e.target.closest('.tab-btn');
+        if (!btn) return;
+        setResultTab(btn.dataset.resultTab);
+      });
+
+      // Copy & Download actions
+      $('copyBtn').addEventListener('click', async () => {
+        const text = getTabContent(state.activeResultTab);
+        if (!text) return;
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast('Copied to clipboard');
+        } catch (_) {
+          showToast('Failed to copy');
+        }
+      });
+
+      function triggerDownload(content, filename) {
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      $('downloadTxtBtn').addEventListener('click', () => {
+        const content = state.activeResultTab === 'cleaned'
+          ? getTabContent('cleaned')
+          : (state.activeResultTab === 'timestamps' ? getTabContent('timestamps') : getTabContent('text'));
+        if (!content) return;
+        triggerDownload(content, `${state.videoTitle}.txt`);
+      });
+
+      $('downloadSrtBtn').addEventListener('click', () => {
+        const srt = getTabContent('srt');
+        if (!srt) {
+          showToast('SRT unavailable (no segments)');
+          return;
+        }
+        triggerDownload(srt, `${state.videoTitle}.srt`);
+      });
+
+      // LLM post-processing actions
+      async function runFormat(instruction, actionBtn) {
+        if (!state.result || !state.result.text) return;
+        const origLabel = actionBtn.textContent;
+        actionBtn.disabled = true;
+        actionBtn.textContent = 'Processing...';
+
+        try {
+          const res = await fetch('/api/format', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: state.result.text,
+              instruction,
+              llm_base_url: llmBaseUrl.value.trim(),
+              llm_api_key: llmApiKey.value.trim(),
+              llm_model: llmModel.value.trim()
+            })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message || data.error || `HTTP ${res.status}`);
+
+          state.result.cleaned_text = data.text || '';
+          cleanedTabBtn.classList.remove('hidden');
+          setResultTab('cleaned');
+          showToast('Text processed with LLM');
+        } catch (err) {
+          showToast('LLM error: ' + err.message);
+        } finally {
+          actionBtn.disabled = false;
+          actionBtn.textContent = origLabel;
+        }
+      }
+
+      $('cleanLlmBtn').addEventListener('click', (e) => {
+        runFormat(
+          'Clean up the transcript: fix punctuation, remove filler words and repetitions, and split into logical paragraphs while preserving the original meaning and language.',
+          e.currentTarget
+        );
+      });
+
+      $('summaryLlmBtn').addEventListener('click', (e) => {
+        runFormat(
+          'Create a structured summary of the text: main topic, bulleted key points, and main takeaways.',
+          e.currentTarget
+        );
+      });
+
+      // Init
+      loadSystem();
+    })();
+  </script>
+</body>
+</html>

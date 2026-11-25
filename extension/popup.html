@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ClipText</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --card: #131a26;
+      --input: #0f1520;
+      --border: #232d40;
+      --text: #eef2ff;
+      --muted: #8f9bb3;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --ok: #10b981;
+      --err: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 410px;
+      min-height: 260px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      padding: 14px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .brand {
+      font-weight: 700;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+    .dot.ok { background: var(--ok); }
+    .dot.err { background: var(--err); }
+    .link-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      text-decoration: underline;
+    }
+    .link-btn:hover { color: var(--text); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    input, select, textarea {
+      width: 100%;
+      background: var(--input);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 7px 9px;
+      font-size: 12px;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      flex: 1;
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-secondary {
+      background: #1b2436;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: #232f46; }
+    .progress-wrap {
+      margin-top: 10px;
+      display: none;
+    }
+    .progress-wrap.visible { display: block; }
+    .progress-bar {
+      height: 6px;
+      background: var(--input);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 5px;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.2s ease;
+    }
+    .status-text {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .status-text.error { color: var(--err); }
+    .result-wrap {
+      display: none;
+    }
+    .result-wrap.visible { display: block; }
+    textarea {
+      min-height: 170px;
+      resize: vertical;
+      line-height: 1.45;
+      font-family: inherit;
+    }
+    .settings-panel {
+      display: none;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+    .settings-panel.open { display: block; }
+    .toast {
+      font-size: 11px;
+      color: var(--ok);
+      margin-top: 6px;
+      min-height: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <span class="dot" id="serverDot" title="Local server status"></span>
+      <span>ClipText</span>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button type="button" class="link-btn" id="toggleSettingsBtn">Settings</button>
+      <button type="button" class="link-btn" id="openWebBtn">Open Web UI</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label for="urlInput">Video URL</label>
+    <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." />
+
+    <div class="row">
+      <div>
+        <label for="modeSelect">Mode</label>
+        <select id="modeSelect">
+          <option value="auto">Auto (Subtitles → Whisper)</option>
+          <option value="subtitles">Subtitles Only</option>
+          <option value="local">Local Whisper</option>
+          <option value="api">API (OpenAI-compat.)</option>
+        </select>
+      </div>
+      <div>
+        <label for="langSelect">Language</label>
+        <select id="langSelect">
+          <option value="auto">Auto</option>
+          <option value="en">English</option>
+          <option value="ru">Russian</option>
+          <option value="uk">Ukrainian</option>
+          <option value="de">German</option>
+          <option value="es">Spanish</option>
+          <option value="fr">French</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="settings-panel" id="settingsPanel">
+      <label for="serverUrlInput">ClipText Server URL</label>
+      <input type="text" id="serverUrlInput" value="http://localhost:8080" />
+      <div class="actions">
+        <button type="button" class="btn btn-secondary" id="syncCookiesBtn" style="flex:1;">Sync YouTube Cookies</button>
+        <button type="button" class="btn btn-secondary" id="saveSettingsBtn">Save</button>
+      </div>
+      <div class="toast" id="settingsToast"></div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn btn-primary" id="playBtn">▶ Get Script</button>
+    </div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="status-text" id="statusText">Preparing...</div>
+    </div>
+  </div>
+
+  <div class="card result-wrap" id="resultWrap">
+    <label id="resultTitle">Result</label>
+    <textarea id="resultText" readonly></textarea>
+    <div class="actions">
+      <button type="button" class="btn btn-primary" id="copyBtn">Copy</button>
+      <button type="button" class="btn btn-secondary" id="downloadBtn">Download .txt</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
